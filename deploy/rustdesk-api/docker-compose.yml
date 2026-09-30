@@ -1,0 +1,47 @@
+services:
+  # hbbs: ID 与握手服务 (使用 lejianwen 兼容镜像)
+  hbbs:
+    container_name: rustdesk-hbbs
+    image: lejianwen/rustdesk-server:latest
+    command: hbbs -r 154.12.39.18:21117 -k _
+    volumes:
+      - ./data:/root
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      - hbbr
+
+  # hbbr: 中继服务 (使用 lejianwen 兼容镜像)
+  hbbr:
+    container_name: rustdesk-hbbr
+    image: lejianwen/rustdesk-server:latest
+    command: hbbr -k _
+    volumes:
+      - ./data:/root
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - RUST_LOG=info
+
+  # API 服务：地址簿与登录
+  api:
+    container_name: rustdesk-api
+    image: lejianwen/rustdesk-api:latest
+    ports:
+      - "21114:21114"
+    volumes:
+      - ./data-api:/app/data
+      - ./data:/app/keys:ro
+    environment:
+      - TZ=Asia/Shanghai
+      - RUSTDESK_API_LANG=zh-CN
+      - RUSTDESK_API_RUSTDESK_PERSONAL=1
+      - RUSTDESK_API_RUSTDESK_ID_SERVER=154.12.39.18:21116
+      - RUSTDESK_API_RUSTDESK_RELAY_SERVER=154.12.39.18:21117
+      - RUSTDESK_API_RUSTDESK_API_SERVER=http://154.12.39.18:21114
+      - RUSTDESK_API_RUSTDESK_KEY_FILE=/app/keys/id_ed25519.pub
+    depends_on:
+      - hbbs
+    restart: unless-stopped
